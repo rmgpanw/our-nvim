@@ -6,7 +6,7 @@ set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCAL_BIN="$HOME/.local/bin"
-NVIM_VERSION="v0.10.3"
+NVIM_VERSION="stable"
 
 info()  { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 warn()  { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
@@ -14,7 +14,7 @@ error() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*"; }
 
 mkdir -p "$LOCAL_BIN"
 
-# ── 1. Install Neovim (AppImage, no root needed) ────────────────────────────
+# ── 1. Install Neovim (no root needed) ───────────────────────────────────────
 install_neovim() {
     if command -v nvim &>/dev/null; then
         local current
@@ -24,59 +24,36 @@ install_neovim() {
         [[ "$ans" =~ ^[Yy]$ ]] || return 0
     fi
 
-    info "Installing Neovim ${NVIM_VERSION}..."
-    local appimage="$LOCAL_BIN/nvim.appimage"
+    info "Installing Neovim (${NVIM_VERSION})..."
 
     if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
         error "Neither curl nor wget found. Install Neovim manually."
         return 1
     fi
 
-    # AppImage filename changed across versions:
-    #   v0.10.x and earlier: nvim.appimage
-    #   v0.11.0+: nvim-linux-x86_64.appimage
-    local urls=(
-        "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.appimage"
-        "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim.appimage"
-    )
+    # Use neovim/neovim-releases repo — builds against glibc 2.17,
+    # so it works on older systems like CentOS 7 / RHEL 7 HPC clusters.
+    # Use the tarball (no FUSE needed, unlike AppImage).
+    local url="https://github.com/neovim/neovim-releases/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+    local tarball="/tmp/nvim-linux-x86_64.tar.gz"
+    local install_dir="$HOME/.local/share/nvim-install"
 
-    local downloaded=false
-    for url in "${urls[@]}"; do
-        info "Trying $url..."
-        if command -v curl &>/dev/null; then
-            if curl -fLo "$appimage" "$url" 2>/dev/null; then
-                downloaded=true
-                break
-            fi
-        else
-            if wget -O "$appimage" "$url" 2>/dev/null; then
-                downloaded=true
-                break
-            fi
-        fi
-    done
-
-    if [ "$downloaded" = false ]; then
-        error "Failed to download Neovim AppImage. Check your internet connection or download manually."
-        return 1
-    fi
-    chmod u+x "$appimage"
-
-    # Try running as AppImage first; if FUSE unavailable, extract
-    if "$appimage" --version &>/dev/null 2>&1; then
-        info "AppImage works directly (FUSE available)"
-        ln -sf "$appimage" "$LOCAL_BIN/nvim"
+    info "Downloading from neovim-releases (glibc 2.17 compatible)..."
+    if command -v curl &>/dev/null; then
+        curl -fLo "$tarball" "$url"
     else
-        info "FUSE not available, extracting AppImage..."
-        cd /tmp
-        "$appimage" --appimage-extract &>/dev/null
-        mkdir -p "$HOME/.local/share"
-        rm -rf "$HOME/.local/share/nvim-appimage"
-        mv squashfs-root "$HOME/.local/share/nvim-appimage"
-        ln -sf "$HOME/.local/share/nvim-appimage/usr/bin/nvim" "$LOCAL_BIN/nvim"
-        rm -f "$appimage"
-        cd "$DOTFILES_DIR"
+        wget -O "$tarball" "$url"
     fi
+
+    # Extract and install
+    mkdir -p "$HOME/.local/share"
+    rm -rf "$install_dir"
+    mkdir -p "$install_dir"
+    tar xzf "$tarball" -C "$install_dir" --strip-components=1
+    rm -f "$tarball"
+
+    # Symlink the binary
+    ln -sf "$install_dir/bin/nvim" "$LOCAL_BIN/nvim"
 
     info "Neovim installed: $("$LOCAL_BIN/nvim" --version | head -1)"
 }
