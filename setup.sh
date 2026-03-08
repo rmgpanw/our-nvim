@@ -25,7 +25,6 @@ install_neovim() {
     fi
 
     info "Installing Neovim ${NVIM_VERSION}..."
-    local url="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.appimage"
     local appimage="$LOCAL_BIN/nvim.appimage"
 
     if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
@@ -33,10 +32,33 @@ install_neovim() {
         return 1
     fi
 
-    if command -v curl &>/dev/null; then
-        curl -fLo "$appimage" "$url"
-    else
-        wget -O "$appimage" "$url"
+    # AppImage filename changed across versions:
+    #   v0.10.x and earlier: nvim.appimage
+    #   v0.11.0+: nvim-linux-x86_64.appimage
+    local urls=(
+        "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.appimage"
+        "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim.appimage"
+    )
+
+    local downloaded=false
+    for url in "${urls[@]}"; do
+        info "Trying $url..."
+        if command -v curl &>/dev/null; then
+            if curl -fLo "$appimage" "$url" 2>/dev/null; then
+                downloaded=true
+                break
+            fi
+        else
+            if wget -O "$appimage" "$url" 2>/dev/null; then
+                downloaded=true
+                break
+            fi
+        fi
+    done
+
+    if [ "$downloaded" = false ]; then
+        error "Failed to download Neovim AppImage. Check your internet connection or download manually."
+        return 1
     fi
     chmod u+x "$appimage"
 
