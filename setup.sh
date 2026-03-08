@@ -70,6 +70,7 @@ install_neovim() {
         info "FUSE not available, extracting AppImage..."
         cd /tmp
         "$appimage" --appimage-extract &>/dev/null
+        mkdir -p "$HOME/.local/share"
         rm -rf "$HOME/.local/share/nvim-appimage"
         mv squashfs-root "$HOME/.local/share/nvim-appimage"
         ln -sf "$HOME/.local/share/nvim-appimage/usr/bin/nvim" "$LOCAL_BIN/nvim"
