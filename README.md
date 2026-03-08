@@ -21,6 +21,16 @@ That's it. The setup script will:
 3. Add shell integration (PATH, aliases, EDITOR)
 4. Install plugins headlessly
 
+## Existing Config Files
+
+The setup script creates symlinks for the following paths:
+
+- `~/.config/nvim` — Neovim configuration
+- `~/.config/tmux` and `~/.tmux.conf` — tmux configuration
+- `~/.vimrc` — Vim fallback
+
+If any of these already exist as real files (not symlinks), they are **automatically backed up** with a timestamped suffix (e.g. `~/.vimrc.bak.1741470000`) before being replaced. Nothing is silently overwritten.
+
 ## What You Get
 
 ### Editor Features
