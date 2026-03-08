@@ -5,7 +5,6 @@ return {
   {
     "R-nvim/R.nvim",
     ft = { "r", "rmd", "quarto", "rnoweb", "rhelp", "rdoc" },
-    dependencies = { "R-nvim/cmp-r" },
     config = function()
       local opts = {
         -- Use tmux for R console if available, otherwise built-in terminal
@@ -17,7 +16,6 @@ return {
         R_app = vim.fn.executable("radian") == 1 and "radian" or "R",
         R_cmd = "R", -- always use R for behind-the-scenes commands
 
-        -- Hook into nvim-cmp for R completions
         hook = {
           on_filetype = function()
             -- R-specific keymaps are set by R.nvim using localleader (\)
@@ -31,7 +29,6 @@ return {
             --   \ro  Object browser
             --   \rh  Help on word
             --   \rv  View data (head)
-            --   \<-  Insert <-  (underscore key in insert mode also works)
 
             vim.keymap.set("n", "<leader>rs", "<Plug>RStart", { buffer = true, desc = "Start R" })
             vim.keymap.set("n", "<leader>rq", "<Plug>RClose", { buffer = true, desc = "Quit R" })
@@ -46,8 +43,7 @@ return {
         objbr_place = "console,below",
         objbr_opendf = true,
 
-        -- Assignment operator: pressing _ in insert mode inserts <-
-        -- Set to 0 to disable this behavior
+        -- Assignment operator
         assignment_keymap = "<M-->", -- Alt+- like RStudio
 
         -- Pipe operator
@@ -55,14 +51,6 @@ return {
         pipe_version = "native", -- use |> not %>%
       }
       require("r").setup(opts)
-    end,
-  },
-
-  -- ── cmp-r: R completion source for nvim-cmp ────────────────────────────
-  {
-    "R-nvim/cmp-r",
-    config = function()
-      require("cmp_r").setup({})
     end,
   },
 

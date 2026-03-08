@@ -11,53 +11,49 @@ return {
           "r", "python", "lua", "bash", "markdown", "markdown_inline",
           "yaml", "json", "toml", "html", "css", "vim", "vimdoc", "query",
         },
-        auto_install = false, -- set true if you have internet
+        auto_install = true,
         highlight = { enable = true },
         indent = { enable = true },
       })
     end,
   },
 
-  -- ── LSP configuration ──────────────────────────────────────────────────
+  -- ── Mason: portable LSP/tool installer ────────────────────────────────
+  {
+    "mason-org/mason.nvim",
+    opts = {},
+  },
+
+  -- ── LSP configuration (nvim 0.11+ vim.lsp.config API) ────────────────
   {
     "neovim/nvim-lspconfig",
     dependencies = {
-      -- Mason: portable LSP/tool installer
-      { "mason-org/mason.nvim", opts = {} },
+      "mason-org/mason.nvim",
       "mason-org/mason-lspconfig.nvim",
     },
     config = function()
-      -- Servers to auto-install via mason (R languageserver is installed via R itself)
-      require("mason-lspconfig").setup({
-        ensure_installed = {
-          "pyright",    -- Python type checker
-          "ruff",       -- Python linter/formatter
-          "lua_ls",     -- Lua (for editing nvim config)
-        },
-      })
-
-      local lspconfig = require("lspconfig")
+      -- Capabilities (enhanced with cmp if available)
       local capabilities = vim.lsp.protocol.make_client_capabilities()
-
-      -- Try to enhance capabilities with cmp if available
       local ok, cmp_lsp = pcall(require, "cmp_nvim_lsp")
       if ok then
         capabilities = vim.tbl_deep_extend("force", capabilities, cmp_lsp.default_capabilities())
       end
 
-      -- Python
-      lspconfig.pyright.setup({ capabilities = capabilities })
-      lspconfig.ruff.setup({ capabilities = capabilities })
-
-      -- R (requires: install.packages("languageserver") in R)
-      lspconfig.r_language_server.setup({
+      -- Configure LSP servers using vim.lsp.config (nvim 0.11+)
+      vim.lsp.config("pyright", {
         capabilities = capabilities,
-        -- Use the R on PATH (works with module system)
+      })
+
+      vim.lsp.config("ruff", {
+        capabilities = capabilities,
+      })
+
+      vim.lsp.config("r_language_server", {
+        capabilities = capabilities,
         cmd = { "R", "--no-echo", "-e", "languageserver::run()" },
       })
 
-      -- Lua (for editing neovim config)
-      lspconfig.lua_ls.setup({
+      vim.lsp.config("lua_ls", {
         capabilities = capabilities,
         settings = {
           Lua = {
@@ -67,6 +63,18 @@ return {
               library = { vim.env.VIMRUNTIME },
             },
           },
+        },
+      })
+
+      -- Enable configured servers
+      vim.lsp.enable({ "pyright", "ruff", "r_language_server", "lua_ls" })
+
+      -- Mason-lspconfig: auto-install servers
+      require("mason-lspconfig").setup({
+        ensure_installed = {
+          "pyright",
+          "ruff",
+          "lua_ls",
         },
       })
 
@@ -143,7 +151,6 @@ return {
           { name = "luasnip" },
           { name = "buffer" },
           { name = "path" },
-          -- R.nvim adds its own cmp source automatically
         },
       })
     end,
@@ -160,10 +167,8 @@ return {
       formatters_by_ft = {
         python = { "ruff_format" },
         lua = { "stylua" },
-        -- R formatting: use styler via conform or format on save via LSP
       },
       format_on_save = function(bufnr)
-        -- Disable for large files
         if vim.api.nvim_buf_line_count(bufnr) > 5000 then return end
         return { timeout_ms = 2000, lsp_format = "fallback" }
       end,
