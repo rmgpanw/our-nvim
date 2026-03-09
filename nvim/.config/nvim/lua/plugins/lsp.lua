@@ -1,19 +1,27 @@
--- LSP, completion, and formatting
+-- LSP, completion, treesitter, and formatting
 
 return {
-  -- ── Treesitter (syntax highlighting, text objects) ──────────────────────
+  -- ── Treesitter (syntax highlighting, indentation) ─────────────────────
   {
     "nvim-treesitter/nvim-treesitter",
+    lazy = false,
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup({
-        ensure_installed = {
-          "r", "python", "lua", "bash", "markdown", "markdown_inline",
-          "yaml", "json", "toml", "html", "css", "vim", "vimdoc", "query",
-        },
-        auto_install = true,
-        highlight = { enable = true },
-        indent = { enable = true },
+      local ts = require("nvim-treesitter")
+
+      -- Install parsers
+      ts.install({
+        "r", "python", "lua", "bash", "markdown", "markdown_inline",
+        "yaml", "json", "toml", "html", "css", "vim", "vimdoc", "query",
+      })
+
+      -- Enable highlight + indent on every filetype
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "*",
+        callback = function(ev)
+          pcall(vim.treesitter.start, ev.buf)
+          vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end,
       })
     end,
   },
