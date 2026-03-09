@@ -9,11 +9,15 @@ return {
     config = function()
       local ts = require("nvim-treesitter")
 
-      -- Install parsers
-      ts.install({
+      -- Install parsers (synchronous wait to avoid race with R.nvim)
+      local parsers = {
         "r", "python", "lua", "bash", "markdown", "markdown_inline",
         "yaml", "json", "toml", "html", "css", "vim", "vimdoc", "query",
-      })
+      }
+      local task = ts.install(parsers)
+      if task and task.wait then
+        pcall(task.wait, task, 60000)
+      end
 
       -- Enable highlight + indent on every filetype
       vim.api.nvim_create_autocmd("FileType", {
